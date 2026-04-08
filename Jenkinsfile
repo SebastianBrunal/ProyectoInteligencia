@@ -1,5 +1,4 @@
 pipeline {
-    // ── Corre todo dentro de un contenedor Python limpio ──────────────────
     agent {
         docker {
             image 'python:3.11-slim'
@@ -10,11 +9,11 @@ pipeline {
     environment {
         DATA_PATH  = "data.csv"
         OUTPUT_DIR = "outputs"
+        IMAGE_NAME = "sdss-ml"
     }
 
     stages {
 
-        // ── 1. Checkout ───────────────────────────────────────────────────
         stage('Checkout') {
             steps {
                 echo 'Clonando repositorio...'
@@ -22,7 +21,6 @@ pipeline {
             }
         }
 
-        // ── 2. Dependencias ───────────────────────────────────────────────
         stage('Install Dependencies') {
             steps {
                 echo 'Instalando dependencias Python...'
@@ -30,7 +28,6 @@ pipeline {
             }
         }
 
-        // ── 3. Tests del dataset ──────────────────────────────────────────
         stage('Dataset Tests') {
             steps {
                 echo 'Corriendo checks del dataset SDSS...'
@@ -38,7 +35,6 @@ pipeline {
             }
         }
 
-        // ── 4. Pipeline ML ────────────────────────────────────────────────
         stage('Run ML Pipeline') {
             steps {
                 echo 'Ejecutando pipeline de ML...'
@@ -46,7 +42,30 @@ pipeline {
             }
         }
 
-        // ── 5. Publicar artefactos ────────────────────────────────────────
+        stage('Build Docker Image') {
+            agent any
+            steps {
+                echo 'Construyendo imagen Docker con Streamlit...'
+                sh 'docker build -t ${IMAGE_NAME} .'
+            }
+        }
+
+        stage('Deploy Streamlit App') {
+            agent any
+            steps {
+                echo 'Lanzando app Streamlit...'
+                sh '''
+                    docker stop sdss-app || true
+                    docker rm sdss-app || true
+                    docker run -d \
+                        --name sdss-app \
+                        -p 8501:8501 \
+                        ${IMAGE_NAME}
+                '''
+                echo 'App disponible en http://localhost:8501'
+            }
+        }
+
         stage('Archive Artifacts') {
             steps {
                 echo 'Archivando métricas y gráficas...'
@@ -57,13 +76,12 @@ pipeline {
 
     post {
         success {
-            echo '✅ Pipeline finalizado exitosamente.'
+            echo '✅ Pipeline finalizado. App corriendo en http://localhost:8501'
         }
         failure {
             echo '❌ Pipeline falló. Revisar logs arriba.'
         }
         always {
-            // Limpia el workspace después de cada build
             cleanWs()
         }
     }
