@@ -1,44 +1,55 @@
 pipeline {
-    agent any
+    // ── Corre todo dentro de un contenedor Python limpio ──────────────────
+    agent {
+        docker {
+            image 'python:3.11-slim'
+            args '-v /var/run/docker.sock:/var/run/docker.sock'
+        }
+    }
 
     environment {
-        DATA_PATH = "data.csv"
+        DATA_PATH  = "data.csv"
         OUTPUT_DIR = "outputs"
     }
 
     stages {
 
+        // ── 1. Checkout ───────────────────────────────────────────────────
         stage('Checkout') {
             steps {
-                echo 'Cloning repository...'
+                echo 'Clonando repositorio...'
                 checkout scm
             }
         }
 
+        // ── 2. Dependencias ───────────────────────────────────────────────
         stage('Install Dependencies') {
             steps {
-                echo 'Installing Python dependencies...'
-                sh 'pip install --quiet -r requirements.txt'
+                echo 'Instalando dependencias Python...'
+                sh 'pip install --quiet --no-cache-dir -r requirements.txt'
             }
         }
 
-        stage('Basic Dataset Tests') {
+        // ── 3. Tests del dataset ──────────────────────────────────────────
+        stage('Dataset Tests') {
             steps {
-                echo 'Running dataset sanity checks...'
+                echo 'Corriendo checks del dataset SDSS...'
                 sh 'DATA_PATH=${DATA_PATH} pytest tests/test_dataset.py -v --tb=short'
             }
         }
 
+        // ── 4. Pipeline ML ────────────────────────────────────────────────
         stage('Run ML Pipeline') {
             steps {
-                echo 'Executing main pipeline...'
+                echo 'Ejecutando pipeline de ML...'
                 sh 'python main.py --data ${DATA_PATH} --output ${OUTPUT_DIR}'
             }
         }
 
+        // ── 5. Publicar artefactos ────────────────────────────────────────
         stage('Archive Artifacts') {
             steps {
-                echo 'Archiving metrics, plots and logs...'
+                echo 'Archivando métricas y gráficas...'
                 archiveArtifacts artifacts: 'outputs/**/*', fingerprint: true
             }
         }
@@ -46,10 +57,14 @@ pipeline {
 
     post {
         success {
-            echo 'Pipeline finished successfully.'
+            echo '✅ Pipeline finalizado exitosamente.'
         }
         failure {
-            echo 'Pipeline failed. Check the logs above.'
+            echo '❌ Pipeline falló. Revisar logs arriba.'
+        }
+        always {
+            // Limpia el workspace después de cada build
+            cleanWs()
         }
     }
 }
