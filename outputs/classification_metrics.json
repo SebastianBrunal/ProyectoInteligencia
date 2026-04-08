@@ -1,0 +1,36 @@
+{
+  "accuracy": 0.9933,
+  "classification_report": {
+    "Galaxy": {
+      "precision": 0.9813084112149533,
+      "recall": 1.0,
+      "f1-score": 0.9905660377358491,
+      "support": 105.0
+    },
+    "QSO": {
+      "precision": 1.0,
+      "recall": 0.9777777777777777,
+      "f1-score": 0.9887640449438202,
+      "support": 90.0
+    },
+    "Star": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 105.0
+    },
+    "accuracy": 0.9933333333333333,
+    "macro avg": {
+      "precision": 0.9937694704049843,
+      "recall": 0.9925925925925926,
+      "f1-score": 0.9931100275598898,
+      "support": 300.0
+    },
+    "weighted avg": {
+      "precision": 0.9934579439252336,
+      "recall": 0.9933333333333333,
+      "f1-score": 0.9933273266906932,
+      "support": 300.0
+    }
+  }
+}
