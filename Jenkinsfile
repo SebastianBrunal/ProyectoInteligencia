@@ -1,10 +1,5 @@
 pipeline {
-    agent {
-        docker {
-            image 'python:3.11-slim'
-            args '-v /var/run/docker.sock:/var/run/docker.sock'
-        }
-    }
+    agent none
 
     environment {
         DATA_PATH  = "data.csv"
@@ -15,6 +10,7 @@ pipeline {
     stages {
 
         stage('Checkout') {
+            agent { docker { image 'python:3.11-slim' args '-v /var/run/docker.sock:/var/run/docker.sock' } }
             steps {
                 echo 'Clonando repositorio...'
                 checkout scm
@@ -22,6 +18,7 @@ pipeline {
         }
 
         stage('Install Dependencies') {
+            agent { docker { image 'python:3.11-slim' args '-v /var/run/docker.sock:/var/run/docker.sock' } }
             steps {
                 echo 'Instalando dependencias Python...'
                 sh 'pip install --quiet --no-cache-dir -r requirements.txt'
@@ -29,6 +26,7 @@ pipeline {
         }
 
         stage('Dataset Tests') {
+            agent { docker { image 'python:3.11-slim' args '-v /var/run/docker.sock:/var/run/docker.sock' } }
             steps {
                 echo 'Corriendo checks del dataset SDSS...'
                 sh 'DATA_PATH=${DATA_PATH} pytest tests/test_dataset.py -v --tb=short'
@@ -36,9 +34,10 @@ pipeline {
         }
 
         stage('Run ML Pipeline') {
+            agent { docker { image 'python:3.11-slim' args '-v /var/run/docker.sock:/var/run/docker.sock' } }
             steps {
                 echo 'Ejecutando pipeline de ML...'
-                sh 'python main.py --data ${DATA_PATH} --output ${OUTPUT_DIR}'
+                sh 'pip install --quiet --no-cache-dir -r requirements.txt && python main.py --data ${DATA_PATH} --output ${OUTPUT_DIR}'
             }
         }
 
@@ -46,6 +45,7 @@ pipeline {
             agent any
             steps {
                 echo 'Construyendo imagen Docker con Streamlit...'
+                checkout scm
                 sh 'docker build -t ${IMAGE_NAME} .'
             }
         }
@@ -67,8 +67,10 @@ pipeline {
         }
 
         stage('Archive Artifacts') {
+            agent { docker { image 'python:3.11-slim' args '-v /var/run/docker.sock:/var/run/docker.sock' } }
             steps {
                 echo 'Archivando métricas y gráficas...'
+                sh 'pip install --quiet --no-cache-dir -r requirements.txt && python main.py --data ${DATA_PATH} --output ${OUTPUT_DIR}'
                 archiveArtifacts artifacts: 'outputs/**/*', fingerprint: true
             }
         }
@@ -80,9 +82,6 @@ pipeline {
         }
         failure {
             echo '❌ Pipeline falló. Revisar logs arriba.'
-        }
-        always {
-            cleanWs()
         }
     }
 }
